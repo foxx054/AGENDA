@@ -3,7 +3,7 @@ from datetime import datetime
 from utils import (
     MONTHS, WEEKDAYS, PRIORITIES, today_str,
     format_time, get_priority_info,
-    LIGHT_GREEN, LIGHT_RED, LIGHT_ORANGE
+    LIGHT_RED, LIGHT_ORANGE
 )
 from database import get_today_tasks, get_overdue_tasks, toggle_completed
 
@@ -54,8 +54,7 @@ class Dashboard(tk.Frame):
         # Summary
         today_tasks = get_today_tasks()
         overdue = get_overdue_tasks()
-        pending = [t for t in today_tasks if not t["completed"]]
-        completed = [t for t in today_tasks if t["completed"]]
+        pending = len(today_tasks)
 
         summary = tk.Frame(self.scrollable, bg="white", padx=24, pady=12)
         summary.pack(fill="x", pady=(0, 8))
@@ -64,8 +63,7 @@ class Dashboard(tk.Frame):
         summary_row.pack()
 
         for label, count, color, light in [
-            ("Pendentes", len(pending), "#FF3B30", LIGHT_RED),
-            ("Concluídas", len(completed), "#34C759", LIGHT_GREEN),
+            ("Pendentes", pending, "#FF3B30", LIGHT_RED),
             ("Atrasadas", len(overdue), "#FF9500", LIGHT_ORANGE),
         ]:
             card = tk.Frame(summary_row, bg=light, padx=16, pady=10, highlightthickness=0)

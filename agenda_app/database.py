@@ -43,7 +43,9 @@ def init_db():
 
 def get_all_tasks():
     conn = get_connection()
-    rows = conn.execute("SELECT * FROM tasks ORDER BY completed ASC, priority DESC, task_date, task_time").fetchall()
+    rows = conn.execute(
+        "SELECT * FROM tasks WHERE completed = 0 ORDER BY priority DESC, task_date, task_time"
+    ).fetchall()
     conn.close()
     return [dict(r) for r in rows]
 
@@ -141,7 +143,7 @@ def delete_task(task_id):
 def get_tasks_by_date(date_str):
     conn = get_connection()
     rows = conn.execute(
-        "SELECT * FROM tasks WHERE task_date = ? ORDER BY priority DESC, task_time",
+        "SELECT * FROM tasks WHERE task_date = ? AND completed = 0 ORDER BY priority DESC, task_time",
         (date_str,)
     ).fetchall()
     conn.close()
@@ -151,7 +153,7 @@ def get_tasks_by_date(date_str):
 def get_tasks_by_date_range(start_str, end_str):
     conn = get_connection()
     rows = conn.execute(
-        "SELECT * FROM tasks WHERE task_date >= ? AND task_date <= ? ORDER BY task_date, priority DESC, task_time",
+        "SELECT * FROM tasks WHERE task_date >= ? AND task_date <= ? AND completed = 0 ORDER BY task_date, priority DESC, task_time",
         (start_str, end_str)
     ).fetchall()
     conn.close()
@@ -183,20 +185,17 @@ def get_overdue_tasks():
     return [dict(r) for r in rows]
 
 
-def search_tasks(query, priority=None, completed=None, project=None):
+def search_tasks(query, priority=None, completed=0, project=None):
     conn = get_connection()
-    sql = "SELECT * FROM tasks WHERE (title LIKE ? OR description LIKE ?)"
-    params = [f"%{query}%", f"%{query}%"]
+    sql = "SELECT * FROM tasks WHERE (title LIKE ? OR description LIKE ?) AND completed = ?"
+    params = [f"%{query}%", f"%{query}%", 1 if completed else 0]
     if priority is not None:
         sql += " AND priority = ?"
         params.append(priority)
-    if completed is not None:
-        sql += " AND completed = ?"
-        params.append(1 if completed else 0)
     if project:
         sql += " AND project = ?"
         params.append(project)
-    sql += " ORDER BY completed ASC, priority DESC, task_date, task_time"
+    sql += " ORDER BY priority DESC, task_date, task_time"
     rows = conn.execute(sql, params).fetchall()
     conn.close()
     return [dict(r) for r in rows]
@@ -212,7 +211,7 @@ def get_all_projects():
 def get_tasks_no_date():
     conn = get_connection()
     rows = conn.execute(
-        "SELECT * FROM tasks WHERE task_date IS NULL OR task_date = '' ORDER BY priority DESC"
+        "SELECT * FROM tasks WHERE (task_date IS NULL OR task_date = '') AND completed = 0 ORDER BY priority DESC"
     ).fetchall()
     conn.close()
     return [dict(r) for r in rows]
