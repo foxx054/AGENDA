@@ -57,6 +57,7 @@ def init_db():
     init_contacts_table(conn)
     init_notes_table(conn)
     init_settings_table(conn)
+    init_receipts_table(conn)
     conn.commit()
     conn.close()
 
@@ -447,6 +448,48 @@ def get_all_projects():
     rows = conn.execute("SELECT DISTINCT project FROM tasks WHERE project != '' ORDER BY project").fetchall()
     conn.close()
     return [r["project"] for r in rows]
+
+
+# ─── Receipts ────────────────────────────────────────────────
+def init_receipts_table(conn):
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS receipts (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            recipient_name TEXT NOT NULL,
+            recipient_doc TEXT DEFAULT '',
+            description TEXT DEFAULT '',
+            value REAL DEFAULT 0,
+            date TEXT DEFAULT '',
+            created_at TEXT DEFAULT (datetime('now'))
+        )
+    """)
+
+
+def add_receipt(receipt):
+    conn = get_connection()
+    cur = conn.execute(
+        "INSERT INTO receipts (recipient_name, recipient_doc, description, value, date) VALUES (?, ?, ?, ?, ?)",
+        (receipt["recipient_name"], receipt.get("recipient_doc", ""),
+         receipt.get("description", ""), receipt.get("value", 0), receipt.get("date", ""))
+    )
+    receipt["id"] = cur.lastrowid
+    conn.commit()
+    conn.close()
+    return receipt
+
+
+def get_all_receipts():
+    conn = get_connection()
+    rows = conn.execute("SELECT * FROM receipts ORDER BY created_at DESC").fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+
+def delete_receipt(receipt_id):
+    conn = get_connection()
+    conn.execute("DELETE FROM receipts WHERE id = ?", (receipt_id,))
+    conn.commit()
+    conn.close()
 
 
 def get_tasks_no_date():

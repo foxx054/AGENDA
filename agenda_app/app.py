@@ -9,6 +9,11 @@ from contacts import ContactsView
 from notes import NotesView
 from settings import SettingsView
 from backup import BackupView
+from receipt import ReceiptView
+from invest_simulator import InvestSimulatorView
+from roi_calculator import ROICalculatorView
+from rate_converter import RateConverterView
+from bmi_calculator import BMICalculatorView
 
 
 SIDEBAR_ITEMS = [
@@ -19,6 +24,11 @@ SIDEBAR_ITEMS = [
     ("importante", "🔴", "Importante"),
     ("contatos",   "👤", "Contatos"),
     ("notas",      "📝", "Anotações"),
+    ("recibos",    "🧾", "Recibos"),
+    ("invest",     "📈", "Simulador"),
+    ("roi",        "💰", "ROI"),
+    ("taxas",      "🔄", "Conversor"),
+    ("imc",        "⚖️", "IMC"),
     ("config",     "⚙️", "Configurações"),
     ("backup",     "💾", "Backup"),
 ]
@@ -165,6 +175,11 @@ class AgendaApp(tk.Tk):
         self.views["notas"] = NotesView(self.content, self, COLORS)
         self.views["config"] = SettingsView(self.content, self, COLORS)
         self.views["backup"] = BackupView(self.content, self, COLORS)
+        self.views["recibos"] = ReceiptView(self.content, self, COLORS)
+        self.views["invest"] = InvestSimulatorView(self.content, self, COLORS)
+        self.views["roi"] = ROICalculatorView(self.content, self, COLORS)
+        self.views["taxas"] = RateConverterView(self.content, self, COLORS)
+        self.views["imc"] = BMICalculatorView(self.content, self, COLORS)
 
         self._switch_view("hoje")
 
