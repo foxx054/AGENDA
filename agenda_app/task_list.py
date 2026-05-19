@@ -1,6 +1,8 @@
 import tkinter as tk
 from datetime import datetime, timedelta
-from utils import PRIORITIES, today_str, to_date_str, format_time, get_priority_info
+from utils import (
+    PRIORITIES, today_str, to_date_str, format_time, get_priority_info
+)
 from database import (
     get_all_tasks, get_tasks_by_date_range, get_high_priority_tasks,
     search_tasks, toggle_completed, get_overdue_tasks, get_tasks_no_date
@@ -8,15 +10,15 @@ from database import (
 
 
 class TaskListView(tk.Frame):
-    def __init__(self, parent, app, mode="all"):
-        super().__init__(parent, bg="#FAFAFA")
+    def __init__(self, parent, app, colors, mode="all"):
+        super().__init__(parent, bg=colors["bg"])
         self.app = app
+        self.C = colors
         self.mode = mode
         self._build_ui()
 
     def _build_ui(self):
-        # Search bar
-        search_frame = tk.Frame(self, bg="white", padx=16, pady=12)
+        search_frame = tk.Frame(self, bg=self.C["surface"], padx=20, pady=16)
         search_frame.pack(fill="x")
 
         titles = {
@@ -26,23 +28,27 @@ class TaskListView(tk.Frame):
         }
         tk.Label(
             search_frame, text=titles.get(self.mode, "Tarefas"),
-            font=("Segoe UI", 18, "bold"), bg="white", fg="#1A1A2E"
+            font=("Segoe UI", 20, "bold"), bg=self.C["surface"], fg=self.C["text"]
         ).pack(anchor="w")
 
+        entry_frame = tk.Frame(search_frame, bg=self.C["border"], bd=0, highlightthickness=0)
+        entry_frame.pack(fill="x", pady=(8, 0))
+
         self.search_entry = tk.Entry(
-            search_frame, font=("Segoe UI", 12),
-            relief="solid", bd=1
+            entry_frame, font=("Segoe UI", 12),
+            bg="#F5F5F7", fg=self.C["text"],
+            relief="flat", bd=0, padx=12, pady=8
         )
-        self.search_entry.pack(fill="x", pady=(6, 0))
+        self.search_entry.pack(fill="x", ipady=4)
         self.search_entry.bind("<KeyRelease>", lambda e: self._filter())
 
         # List container
-        container = tk.Frame(self, bg="#FAFAFA")
-        container.pack(fill="both", expand=True, padx=16, pady=(8, 16))
+        container = tk.Frame(self, bg=self.C["bg"])
+        container.pack(fill="both", expand=True, padx=20, pady=(12, 20))
 
-        self.canvas = tk.Canvas(container, bg="#FAFAFA", highlightthickness=0)
+        self.canvas = tk.Canvas(container, bg=self.C["bg"], highlightthickness=0)
         scrollbar = tk.Scrollbar(container, orient="vertical", command=self.canvas.yview)
-        self.scrollable = tk.Frame(self.canvas, bg="#FAFAFA")
+        self.scrollable = tk.Frame(self.canvas, bg=self.C["bg"])
 
         self.scrollable.bind(
             "<Configure>",
@@ -75,7 +81,6 @@ class TaskListView(tk.Frame):
         else:
             tasks = get_all_tasks()
 
-        # Group by date
         groups = {}
         no_date = []
         for t in tasks:
@@ -87,7 +92,6 @@ class TaskListView(tk.Frame):
             else:
                 no_date.append(t)
 
-        # Render grouped
         for date_str in sorted(groups.keys()):
             date_tasks = groups[date_str]
             d = datetime.strptime(date_str, "%Y-%m-%d")
@@ -97,105 +101,120 @@ class TaskListView(tk.Frame):
             elif date_str == (now + timedelta(days=1)).strftime("%Y-%m-%d"):
                 label = "Amanhã"
 
+            group_frame = tk.Frame(self.scrollable, bg=self.C["bg"])
+            group_frame.pack(fill="x", pady=(4, 0))
+
             tk.Label(
-                self.scrollable, text=label,
-                font=("Segoe UI", 13, "bold"),
-                bg="#FAFAFA", fg="#1A1A2E"
+                group_frame, text=label,
+                font=("Segoe UI", 14, "bold"),
+                bg=self.C["bg"], fg=self.C["text"]
             ).pack(anchor="w", pady=(12, 4))
 
             for t in date_tasks:
                 self._create_task_card(t)
 
         if no_date:
+            group_frame = tk.Frame(self.scrollable, bg=self.C["bg"])
+            group_frame.pack(fill="x", pady=(4, 0))
+
             tk.Label(
-                self.scrollable, text="Sem data",
-                font=("Segoe UI", 13, "bold"),
-                bg="#FAFAFA", fg="#6B7280"
+                group_frame, text="Sem data",
+                font=("Segoe UI", 14, "bold"),
+                bg=self.C["bg"], fg=self.C["text_sec"]
             ).pack(anchor="w", pady=(12, 4))
             for t in no_date:
                 self._create_task_card(t)
 
         if not groups and not no_date:
+            empty = tk.Frame(
+                self.scrollable, bg=self.C["surface"], padx=28, pady=32,
+                highlightthickness=1, highlightbackground=self.C["border"]
+            )
+            empty.pack(fill="x", pady=20)
             tk.Label(
-                self.scrollable, text="Nenhuma tarefa encontrada",
-                font=("Segoe UI", 12), bg="#FAFAFA", fg="#9CA3AF"
-            ).pack(pady=30)
+                empty, text="Nenhuma tarefa encontrada",
+                font=("Segoe UI", 13), bg=self.C["surface"], fg=self.C["text_sec"]
+            ).pack()
 
     def _create_task_card(self, task):
         is_completed = task.get("completed", 0)
         prio = get_priority_info(task.get("priority", 1))
-        card_bg = "#F0FDF4" if is_completed else "white"
 
-        card = tk.Frame(self.scrollable, bg=card_bg, padx=12, pady=8, highlightthickness=0)
+        card = tk.Frame(
+            self.scrollable, bg=self.C["surface"], padx=16, pady=12,
+            highlightthickness=1, highlightbackground=self.C["border"]
+        )
         card.pack(fill="x", pady=2)
 
-        bar = tk.Frame(card, bg=prio["color"], width=4)
-        bar.pack(side="left", fill="y")
-        bar.pack_propagate(False)
+        # Priority bar
+        prio_bar = tk.Frame(card, bg=prio["color"], width=3)
+        prio_bar.pack(side="left", fill="y")
+        prio_bar.pack_propagate(False)
 
-        chk_frame = tk.Frame(card, bg=card_bg)
-        chk_frame.pack(side="left", padx=(8, 8))
+        # Checkbox
+        chk_frame = tk.Frame(card, bg=self.C["surface"])
+        chk_frame.pack(side="left", padx=(10, 8))
 
         chk_text = "✓" if is_completed else "○"
+        chk_color = "#34C759" if is_completed else "#C7C7CC"
         chk = tk.Label(
             chk_frame, text=chk_text,
-            font=("Segoe UI", 16), bg=card_bg,
-            fg="#34C759" if is_completed else "#D1D5DB",
+            font=("Segoe UI", 18), bg=self.C["surface"], fg=chk_color,
             cursor="hand2"
         )
         chk.pack()
 
-        content = tk.Frame(card, bg=card_bg)
+        # Content
+        content = tk.Frame(card, bg=self.C["surface"])
         content.pack(side="left", fill="x", expand=True)
 
-        fg = "#9CA3AF" if is_completed else "#1A1A2E"
+        title_fg = self.C["text_sec"] if is_completed else self.C["text"]
         tk.Label(
             content, text=task["title"],
-            font=("Segoe UI", 12, "bold" if not is_completed else "italic"),
-            bg=card_bg, fg=fg
-        ).pack(anchor="w")
+            font=("Segoe UI", 13, "bold" if not is_completed else "italic"),
+            bg=self.C["surface"], fg=title_fg, anchor="w"
+        ).pack(fill="x")
 
-        meta = tk.Frame(content, bg=card_bg)
-        meta.pack(anchor="w")
+        # Meta row
+        meta = tk.Frame(content, bg=self.C["surface"])
+        meta.pack(anchor="w", pady=(4, 0))
 
         if task.get("task_time"):
             tk.Label(
                 meta, text=format_time(task["task_time"]),
-                font=("Segoe UI", 10), bg=card_bg, fg="#6B7280"
-            ).pack(side="left", padx=(0, 6))
+                font=("Segoe UI", 11), bg=self.C["surface"], fg=self.C["text_sec"]
+            ).pack(side="left", padx=(0, 8))
 
+        # Priority badge
+        prio_badge = tk.Frame(meta, bg=prio["light"], padx=6, pady=1)
+        prio_badge.pack(side="left", padx=(0, 4))
         tk.Label(
-            meta, text=prio["label"],
-            font=("Segoe UI", 9, "bold"), bg=prio["light"],
-            fg=prio["color"], padx=6, pady=1
-        ).pack(side="left")
+            prio_badge, text=prio["label"],
+            font=("Segoe UI", 9, "bold"),
+            bg=prio["light"], fg=prio["color"]
+        ).pack()
 
         if task.get("project"):
+            proj_badge = tk.Frame(meta, bg="#E8F0FE", padx=6, pady=1)
+            proj_badge.pack(side="left", padx=(0, 4))
             tk.Label(
-                meta, text=task["project"],
-                font=("Segoe UI", 9), bg="#E8F0FE",
-                fg="#007AFF", padx=6, pady=1
-            ).pack(side="left", padx=(4, 0))
+                proj_badge, text=task["project"],
+                font=("Segoe UI", 9), bg="#E8F0FE", fg="#007AFF"
+            ).pack()
 
         if task.get("repeat_type"):
             tk.Label(
-                meta, text="↻",
-                font=("Segoe UI", 11), bg=card_bg,
-                fg="#007AFF"
-            ).pack(side="left", padx=(4, 0))
+                meta, text="↻", font=("Segoe UI", 12),
+                bg=self.C["surface"], fg="#007AFF"
+            ).pack(side="left", padx=(2, 0))
 
-        if is_completed:
-            tk.Label(
-                meta, text="Finalizado",
-                font=("Segoe UI", 9, "bold"), bg=card_bg, fg="#34C759"
-            ).pack(side="right")
-
+        # Subtask summary
         subtasks = task.get("subtasks", [])
         if subtasks:
             st_done = sum(1 for s in subtasks if s["completed"])
             tk.Label(
                 content, text=f"  {st_done}/{len(subtasks)} subtarefas",
-                font=("Segoe UI", 9), bg=card_bg, fg="#9CA3AF"
+                font=("Segoe UI", 10), bg=self.C["surface"], fg=self.C["text_sec"]
             ).pack(anchor="w")
 
         task_id = task["id"]

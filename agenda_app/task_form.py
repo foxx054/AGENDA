@@ -2,7 +2,7 @@ import tkinter as tk
 from tkinter import messagebox
 from datetime import datetime, timedelta
 from utils import PRIORITIES, REMINDER_OPTIONS, REPEAT_OPTIONS, today_str
-from database import save_task, get_all_tasks
+from database import save_task
 
 
 class TaskFormDialog(tk.Toplevel):
@@ -12,7 +12,7 @@ class TaskFormDialog(tk.Toplevel):
         self.task = task
 
         self.title("Editar Tarefa" if task else "Nova Tarefa")
-        self.geometry("480x650")
+        self.geometry("480x620")
         self.resizable(False, False)
         self.transient(parent)
         self.grab_set()
@@ -20,123 +20,145 @@ class TaskFormDialog(tk.Toplevel):
         self._build_form()
         self.update_idletasks()
         x = (self.winfo_screenwidth() // 2) - 240
-        y = (self.winfo_screenheight() // 2) - 325
+        y = (self.winfo_screenheight() // 2) - 310
         self.geometry(f"+{x}+{y}")
 
     def _build_form(self):
-        main = tk.Frame(self, padx=20, pady=20, bg="#FAFAFA")
+        bg = "#F5F5F7"
+        surface = "white"
+        text = "#1C1C1E"
+        text_sec = "#8E8E93"
+        border = "#E5E5EA"
+        accent = "#007AFF"
+
+        main = tk.Frame(self, padx=24, pady=24, bg=bg)
         main.pack(fill="both", expand=True)
 
         # Title
         tk.Label(main, text="Título", font=("Segoe UI", 11, "bold"),
-                 bg="#FAFAFA", fg="#1A1A2E").pack(anchor="w")
-        self.title_entry = tk.Entry(main, font=("Segoe UI", 14),
-                                    relief="solid", bd=1)
-        self.title_entry.pack(fill="x", pady=(0, 12))
+                 bg=bg, fg=text).pack(anchor="w")
+        entry_frame = tk.Frame(main, bg=border, bd=0)
+        entry_frame.pack(fill="x", pady=(0, 14))
+        self.title_entry = tk.Entry(
+            entry_frame, font=("Segoe UI", 14),
+            bg=surface, fg=text, relief="flat", bd=0, padx=12, pady=8
+        )
+        self.title_entry.pack(fill="x", ipady=2)
         if self.task:
             self.title_entry.insert(0, self.task["title"])
         else:
             self.title_entry.focus_set()
 
-        # Date & Time
-        row = tk.Frame(main, bg="#FAFAFA")
+        # Date & Time row
+        row = tk.Frame(main, bg=bg)
         row.pack(fill="x")
 
-        left = tk.Frame(row, bg="#FAFAFA")
+        left = tk.Frame(row, bg=bg)
         left.pack(side="left", fill="x", expand=True, padx=(0, 6))
 
         tk.Label(left, text="Data", font=("Segoe UI", 10, "bold"),
-                 bg="#FAFAFA", fg="#1A1A2E").pack(anchor="w")
-        self.date_entry = tk.Entry(left, font=("Segoe UI", 11),
-                                   relief="solid", bd=1)
-        self.date_entry.pack(fill="x", pady=(0, 6))
+                 bg=bg, fg=text).pack(anchor="w")
+        df = tk.Frame(left, bg=border, bd=0)
+        df.pack(fill="x", pady=(0, 10))
+        self.date_entry = tk.Entry(
+            df, font=("Segoe UI", 12), bg=surface, fg=text,
+            relief="flat", bd=0, padx=10, pady=6
+        )
+        self.date_entry.pack(fill="x", ipady=2)
         default_date = self.task["task_date"] if self.task and self.task.get("task_date") else today_str()
         self.date_entry.insert(0, default_date)
 
-        right = tk.Frame(row, bg="#FAFAFA")
+        right = tk.Frame(row, bg=bg)
         right.pack(side="left", fill="x", expand=True, padx=(6, 0))
 
         tk.Label(right, text="Horário", font=("Segoe UI", 10, "bold"),
-                 bg="#FAFAFA", fg="#1A1A2E").pack(anchor="w")
-        self.time_entry = tk.Entry(right, font=("Segoe UI", 11),
-                                   relief="solid", bd=1)
-        self.time_entry.pack(fill="x", pady=(0, 6))
+                 bg=bg, fg=text).pack(anchor="w")
+        tf = tk.Frame(right, bg=border, bd=0)
+        tf.pack(fill="x", pady=(0, 10))
+        self.time_entry = tk.Entry(
+            tf, font=("Segoe UI", 12), bg=surface, fg=text,
+            relief="flat", bd=0, padx=10, pady=6
+        )
+        self.time_entry.pack(fill="x", ipady=2)
         default_time = self.task["task_time"] if self.task and self.task.get("task_time") else ""
         self.time_entry.insert(0, default_time)
 
         # Priority
         tk.Label(main, text="Prioridade", font=("Segoe UI", 11, "bold"),
-                 bg="#FAFAFA", fg="#1A1A2E").pack(anchor="w", pady=(8, 4))
-        prio_frame = tk.Frame(main, bg="#FAFAFA")
+                 bg=bg, fg=text).pack(anchor="w", pady=(6, 4))
+        prio_frame = tk.Frame(main, bg=bg)
         prio_frame.pack(fill="x")
-
         self.priority_var = tk.IntVar(value=self.task["priority"] if self.task else 1)
         for p in PRIORITIES:
             btn = tk.Button(
                 prio_frame, text=f"{p['icon']} {p['label']}",
-                font=("Segoe UI", 10),
-                bg="white", fg=p["color"],
-                relief="solid", bd=1, padx=12, pady=4,
+                font=("Segoe UI", 10), bg=surface, fg=p["color"],
+                relief="flat", bd=1, highlightbackground=border,
+                padx=14, pady=4, cursor="hand2",
                 command=lambda v=p["id"]: self.priority_var.set(v)
             )
             btn.pack(side="left", padx=2)
 
         # Reminder
         tk.Label(main, text="Lembrete", font=("Segoe UI", 11, "bold"),
-                 bg="#FAFAFA", fg="#1A1A2E").pack(anchor="w", pady=(8, 4))
-        rem_frame = tk.Frame(main, bg="#FAFAFA")
+                 bg=bg, fg=text).pack(anchor="w", pady=(6, 4))
+        rem_frame = tk.Frame(main, bg=bg)
         rem_frame.pack(fill="x")
         self.reminder_var = tk.IntVar(
             value=self.task["reminder"] if self.task and self.task.get("reminder") is not None else -1
         )
         tk.Radiobutton(
-            rem_frame, text="Sem lembrete", variable=self.reminder_var,
-            value=-1, font=("Segoe UI", 10), bg="#FAFAFA", selectcolor="#E8F0FE"
+            rem_frame, text="Sem", variable=self.reminder_var,
+            value=-1, font=("Segoe UI", 10), bg=bg, selectcolor="#E8F0FE"
         ).pack(side="left", padx=2)
         for label, val in REMINDER_OPTIONS:
-            rb = tk.Radiobutton(
+            tk.Radiobutton(
                 rem_frame, text=label, variable=self.reminder_var,
                 value=val, font=("Segoe UI", 10),
-                bg="#FAFAFA", selectcolor="#E8F0FE"
-            )
-            rb.pack(side="left", padx=2)
+                bg=bg, selectcolor="#E8F0FE"
+            ).pack(side="left", padx=2)
 
         # Project
         tk.Label(main, text="Projeto", font=("Segoe UI", 11, "bold"),
-                 bg="#FAFAFA", fg="#1A1A2E").pack(anchor="w", pady=(8, 4))
-        self.project_entry = tk.Entry(main, font=("Segoe UI", 11),
-                                      relief="solid", bd=1)
-        self.project_entry.pack(fill="x", pady=(0, 12))
+                 bg=bg, fg=text).pack(anchor="w", pady=(6, 4))
+        pf = tk.Frame(main, bg=border, bd=0)
+        pf.pack(fill="x", pady=(0, 10))
+        self.project_entry = tk.Entry(
+            pf, font=("Segoe UI", 12), bg=surface, fg=text,
+            relief="flat", bd=0, padx=10, pady=6
+        )
+        self.project_entry.pack(fill="x", ipady=2)
         if self.task and self.task.get("project"):
             self.project_entry.insert(0, self.task["project"])
 
         # Repeat
         tk.Label(main, text="Repetir", font=("Segoe UI", 11, "bold"),
-                 bg="#FAFAFA", fg="#1A1A2E").pack(anchor="w", pady=(0, 4))
-        repeat_frame = tk.Frame(main, bg="#FAFAFA")
+                 bg=bg, fg=text).pack(anchor="w", pady=(0, 4))
+        repeat_frame = tk.Frame(main, bg=bg)
         repeat_frame.pack(fill="x")
 
         default_repeat = self.task["repeat_type"] if self.task and self.task.get("repeat_type") else ""
         self.repeat_var = tk.StringVar(value=default_repeat)
         for label, val in REPEAT_OPTIONS:
-            rb = tk.Radiobutton(
+            tk.Radiobutton(
                 repeat_frame, text=label, variable=self.repeat_var,
                 value=val, font=("Segoe UI", 10),
-                bg="#FAFAFA", selectcolor="#E8F0FE",
+                bg=bg, selectcolor="#E8F0FE",
                 command=self._toggle_repeat_custom
-            )
-            rb.pack(side="left", padx=2)
+            ).pack(side="left", padx=2)
 
-        self.custom_frame = tk.Frame(main, bg="#FAFAFA")
+        self.custom_frame = tk.Frame(main, bg=bg)
         tk.Label(
             self.custom_frame, text="A cada quantos dias?",
-            font=("Segoe UI", 10), bg="#FAFAFA", fg="#6B7280"
+            font=("Segoe UI", 10), bg=bg, fg=text_sec
         ).pack(side="left", padx=(0, 6))
+        cif = tk.Frame(self.custom_frame, bg=border, bd=0)
+        cif.pack(side="left")
         self.repeat_interval_entry = tk.Entry(
-            self.custom_frame, font=("Segoe UI", 11),
-            width=6, relief="solid", bd=1
+            cif, font=("Segoe UI", 11), width=6,
+            bg=surface, fg=text, relief="flat", bd=0, padx=8, pady=4
         )
-        self.repeat_interval_entry.pack(side="left")
+        self.repeat_interval_entry.pack()
         default_interval = str(self.task["repeat_interval"]) if self.task and self.task.get("repeat_interval") else "1"
         self.repeat_interval_entry.insert(0, default_interval)
         if default_repeat == "custom":
@@ -146,29 +168,32 @@ class TaskFormDialog(tk.Toplevel):
 
         # Description
         tk.Label(main, text="Descrição", font=("Segoe UI", 11, "bold"),
-                 bg="#FAFAFA", fg="#1A1A2E").pack(anchor="w", pady=(8, 4))
-        self.desc_text = tk.Text(main, height=2, font=("Segoe UI", 11),
-                                 relief="solid", bd=1)
-        self.desc_text.pack(fill="x", pady=(0, 12))
+                 bg=bg, fg=text).pack(anchor="w", pady=(6, 4))
+        desc_frame = tk.Frame(main, bg=border, bd=0)
+        desc_frame.pack(fill="x", pady=(0, 12))
+        self.desc_text = tk.Text(
+            desc_frame, height=2, font=("Segoe UI", 11),
+            bg=surface, fg=text, relief="flat", bd=0, padx=10, pady=6
+        )
+        self.desc_text.pack(fill="x")
         if self.task and self.task.get("description"):
             self.desc_text.insert("1.0", self.task["description"])
 
         # Buttons
-        btn_frame = tk.Frame(main, bg="#FAFAFA")
+        btn_frame = tk.Frame(main, bg=bg)
         btn_frame.pack(fill="x", pady=(8, 0))
 
         tk.Button(
-            btn_frame, text="Cancelar",
-            font=("Segoe UI", 11), bg="white", fg="#6B7280",
-            relief="solid", bd=1, padx=16, pady=6,
+            btn_frame, text="Cancelar", font=("Segoe UI", 12),
+            bg="white", fg=text_sec, relief="flat", bd=1,
+            highlightbackground=border, padx=20, pady=8, cursor="hand2",
             command=self.destroy
-        ).pack(side="right", padx=(6, 0))
+        ).pack(side="right", padx=(8, 0))
 
         tk.Button(
-            btn_frame, text="Salvar",
-            font=("Segoe UI", 11, "bold"),
-            bg="#007AFF", fg="white",
-            relief="solid", bd=0, padx=16, pady=6,
+            btn_frame, text="Salvar", font=("Segoe UI", 12, "bold"),
+            bg=accent, fg="white", relief="flat", bd=0,
+            padx=24, pady=8, cursor="hand2",
             command=self._save
         ).pack(side="right")
 
@@ -192,7 +217,7 @@ class TaskFormDialog(tk.Toplevel):
                 if repeat_interval < 1:
                     raise ValueError
             except ValueError:
-                messagebox.showwarning("Atenção", "Intervalo personalizado deve ser um número maior que 0.")
+                messagebox.showwarning("Atenção", "Intervalo deve ser um número > 0.")
                 return
 
         task_data = {

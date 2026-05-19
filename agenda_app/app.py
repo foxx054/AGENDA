@@ -8,14 +8,27 @@ from notifications import NotificationManager
 
 
 SIDEBAR_ITEMS = [
-    ("hoje", "📅 Hoje"),
-    ("semana", "📋 Próximos 7 dias"),
-    ("mes", "🗓️ Calendário"),
-    ("todas", "📂 Todas"),
-    ("importante", "🔴 Importante"),
+    ("hoje",     "📅", "Hoje"),
+    ("semana",   "📋", "Próximos 7 dias"),
+    ("mes",      "🗓️", "Calendário"),
+    ("todas",    "📂", "Todas"),
+    ("importante", "🔴", "Importante"),
 ]
 
-SIDEBAR_WIDTH = 200
+SIDEBAR_WIDTH = 220
+COLORS = {
+    "sidebar_bg": "#1C1C1E",
+    "sidebar_hover": "#2C2C2E",
+    "sidebar_active": "#2C2C2E",
+    "sidebar_text": "#8E8E93",
+    "sidebar_text_active": "#FFFFFF",
+    "accent": "#007AFF",
+    "bg": "#F5F5F7",
+    "surface": "#FFFFFF",
+    "text": "#1C1C1E",
+    "text_sec": "#8E8E93",
+    "border": "#E5E5EA",
+}
 
 
 class AgendaApp(tk.Tk):
@@ -24,6 +37,7 @@ class AgendaApp(tk.Tk):
         self.title("Minhas Tarefas")
         self.geometry("1000x700")
         self.minsize(800, 500)
+        self.configure(bg=COLORS["bg"])
         self.tasks = []
 
         init_db()
@@ -40,81 +54,111 @@ class AgendaApp(tk.Tk):
         self.tasks = get_all_tasks()
 
     def _build_ui(self):
-        self.sidebar = tk.Frame(self, bg="#1A1A2E", width=SIDEBAR_WIDTH)
+        self.sidebar = tk.Frame(self, bg=COLORS["sidebar_bg"], width=SIDEBAR_WIDTH)
         self.sidebar.pack(side="left", fill="y")
         self.sidebar.pack_propagate(False)
 
-        # App title in sidebar
+        self.sidebar_btns = []
+
+        # App title
+        title_frame = tk.Frame(self.sidebar, bg=COLORS["sidebar_bg"])
+        title_frame.pack(fill="x", pady=(24, 32))
+
         tk.Label(
-            self.sidebar, text="Minhas Tarefas",
-            font=("Segoe UI", 16, "bold"),
-            bg="#1A1A2E", fg="white", pady=20
-        ).pack(fill="x")
+            title_frame, text="Minhas\nTarefas",
+            font=("Segoe UI", 20, "bold"),
+            bg=COLORS["sidebar_bg"], fg="white", justify="left"
+        ).pack(anchor="w", padx=20)
+
+        # Separator
+        sep = tk.Frame(self.sidebar, bg="#38383A", height=1)
+        sep.pack(fill="x", padx=16, pady=(0, 8))
 
         # Nav items
         self.nav_var = tk.StringVar(value="hoje")
-        for item_id, label in SIDEBAR_ITEMS:
-            btn = tk.Button(
-                self.sidebar, text=label,
-                font=("Segoe UI", 12),
-                bg="#1A1A2E", fg="#9CA3AF",
-                activebackground="#2D2D4E", activeforeground="white",
-                bd=0, anchor="w", padx=20, pady=10,
-                command=lambda i=item_id: self._switch_view(i)
+        for item_id, icon, label in SIDEBAR_ITEMS:
+            btn_frame = tk.Frame(self.sidebar, bg=COLORS["sidebar_bg"], cursor="hand2")
+            btn_frame.pack(fill="x", padx=8, pady=1)
+
+            indicator = tk.Frame(btn_frame, bg=COLORS["accent"], width=3)
+            indicator.pack(side="left", fill="y")
+
+            icon_lbl = tk.Label(
+                btn_frame, text=icon,
+                font=("Segoe UI", 13), bg=COLORS["sidebar_bg"],
+                fg=COLORS["sidebar_text"]
             )
-            btn.pack(fill="x")
-            btn.bind("<Enter>", lambda e, b=btn: b.configure(bg="#2D2D4E"))
-            btn.bind("<Leave>", lambda e, b=btn: b.configure(bg="#1A1A2E"))
+            icon_lbl.pack(side="left", padx=(12, 8), pady=10)
 
-        # New task button at bottom of sidebar
-        tk.Frame(self.sidebar, bg="#1A1A2E").pack(expand=True)
+            text_lbl = tk.Label(
+                btn_frame, text=label,
+                font=("Segoe UI", 12), bg=COLORS["sidebar_bg"],
+                fg=COLORS["sidebar_text"], anchor="w"
+            )
+            text_lbl.pack(side="left", fill="x", expand=True, pady=10)
+
+            def make_handler(i=item_id, fr=btn_frame, ind=indicator, il=icon_lbl, tl=text_lbl):
+                for stored_id, stored_ind, stored_il, stored_tl in self.sidebar_btns:
+                    bg = COLORS["sidebar_bg"]
+                    stored_ind.configure(bg=bg)
+                    stored_il.configure(fg=COLORS["sidebar_text"])
+                    stored_tl.configure(fg=COLORS["sidebar_text"])
+                ind.configure(bg=COLORS["accent"])
+                il.configure(fg="white")
+                tl.configure(fg="white")
+                self._switch_view(i)
+
+            btn_frame.bind("<Button-1>", lambda e, h=make_handler: h())
+            indicator.bind("<Button-1>", lambda e, h=make_handler: h())
+            icon_lbl.bind("<Button-1>", lambda e, h=make_handler: h())
+            text_lbl.bind("<Button-1>", lambda e, h=make_handler: h())
+
+            self.sidebar_btns.append((item_id, indicator, icon_lbl, text_lbl))
+
+        # Spacer
+        tk.Frame(self.sidebar, bg=COLORS["sidebar_bg"]).pack(expand=True)
+
+        # New task button
+        btn_container = tk.Frame(self.sidebar, bg=COLORS["sidebar_bg"], padx=12, pady=(0, 12))
+        btn_container.pack(fill="x")
 
         tk.Button(
-            self.sidebar, text="+ Nova Tarefa",
+            btn_container, text="+ Nova Tarefa",
             font=("Segoe UI", 12, "bold"),
-            bg="#007AFF", fg="white",
+            bg=COLORS["accent"], fg="white",
             activebackground="#005BB5",
-            bd=0, padx=16, pady=10,
+            relief="flat", bd=0, padx=16, pady=10,
+            cursor="hand2",
             command=self._new_task
-        ).pack(fill="x", padx=12, pady=(0, 8))
+        ).pack(fill="x")
 
         tk.Button(
-            self.sidebar, text="🔔 Testar Notificação",
+            btn_container, text="🔔 Testar Notificação",
             font=("Segoe UI", 10),
-            bg="#2D2D4E", fg="#9CA3AF",
-            activebackground="#3D3D5E", activeforeground="white",
-            bd=0, padx=16, pady=8,
+            bg="#2C2C2E", fg="#8E8E93",
+            activebackground="#3D3D3F", activeforeground="white",
+            relief="flat", bd=0, padx=16, pady=8,
+            cursor="hand2",
             command=self._test_notification
-        ).pack(fill="x", padx=12, pady=(0, 16))
+        ).pack(fill="x", pady=(6, 0))
 
-        # Main content area
-        self.content = tk.Frame(self, bg="#FAFAFA")
+        # Main content
+        self.content = tk.Frame(self, bg=COLORS["bg"])
         self.content.pack(side="left", fill="both", expand=True)
 
         self.views = {}
         self._current_view = None
-
-        # Pre-create all views
-        self.views["hoje"] = Dashboard(self.content, self)
-        self.views["semana"] = TaskListView(self.content, self, mode="week")
-        self.views["mes"] = CalendarWidget(self.content, self)
-        self.views["todas"] = TaskListView(self.content, self, mode="all")
-        self.views["importante"] = TaskListView(self.content, self, mode="important")
+        self.views["hoje"] = Dashboard(self.content, self, COLORS)
+        self.views["semana"] = TaskListView(self.content, self, COLORS, mode="week")
+        self.views["mes"] = CalendarWidget(self.content, self, COLORS)
+        self.views["todas"] = TaskListView(self.content, self, COLORS, mode="all")
+        self.views["importante"] = TaskListView(self.content, self, COLORS, mode="important")
 
         self._switch_view("hoje")
 
     def _switch_view(self, view_id):
         if self._current_view:
             self._current_view.pack_forget()
-
-        # Update sidebar highlight
-        for i, (item_id, _) in enumerate(SIDEBAR_ITEMS):
-            btn = self.sidebar.winfo_children()[i + 1]  # skip title label
-            if item_id == view_id:
-                btn.configure(bg="#2D2D4E", fg="white")
-            else:
-                btn.configure(bg="#1A1A2E", fg="#9CA3AF")
-
         self._current_view = self.views[view_id]
         self._current_view.pack(fill="both", expand=True)
         self._current_view.refresh()
@@ -129,15 +173,14 @@ class AgendaApp(tk.Tk):
                 if t.get("task_time") and not t.get("completed"):
                     self.notif_mgr._show_notification(t)
                     return
-            # Fallback: show first task
             self.notif_mgr._show_notification(self.tasks[0])
         else:
             from tkinter import messagebox
-            messagebox.showinfo("Aviso", "Crie uma tarefa primeiro para testar.")
+            messagebox.showinfo("Aviso", "Crie uma tarefa primeiro.")
 
     def show_task_detail(self, task_id):
         from task_detail import TaskDetailDialog
-        TaskDetailDialog(self, self, task_id)
+        TaskDetailDialog(self, self, task_id, COLORS)
 
     def _setup_notifications(self):
         self.notif_mgr = NotificationManager(self)
