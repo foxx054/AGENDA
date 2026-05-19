@@ -14,6 +14,9 @@ from invest_simulator import InvestSimulatorView
 from roi_calculator import ROICalculatorView
 from rate_converter import RateConverterView
 from bmi_calculator import BMICalculatorView
+from stopwatch import StopwatchView
+from print_view import PrintView
+from email_sender import EmailSenderView
 
 
 SIDEBAR_ITEMS = [
@@ -29,6 +32,9 @@ SIDEBAR_ITEMS = [
     ("roi",        "💰", "ROI"),
     ("taxas",      "🔄", "Conversor"),
     ("imc",        "⚖️", "IMC"),
+    ("stopwatch",  "⏱️", "Cronômetro"),
+    ("print",      "🖨️", "Impressão"),
+    ("email",      "📧", "E-mail"),
     ("config",     "⚙️", "Configurações"),
     ("backup",     "💾", "Backup"),
 ]
@@ -180,6 +186,9 @@ class AgendaApp(tk.Tk):
         self.views["roi"] = ROICalculatorView(self.content, self, COLORS)
         self.views["taxas"] = RateConverterView(self.content, self, COLORS)
         self.views["imc"] = BMICalculatorView(self.content, self, COLORS)
+        self.views["stopwatch"] = StopwatchView(self.content, self, COLORS)
+        self.views["print"] = PrintView(self.content, self, COLORS)
+        self.views["email"] = EmailSenderView(self.content, self, COLORS)
 
         self._switch_view("hoje")
 
