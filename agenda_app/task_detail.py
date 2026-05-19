@@ -1,7 +1,7 @@
 import tkinter as tk
 from tkinter import messagebox
 from database import get_task_by_id, delete_task, toggle_completed, add_subtask, toggle_subtask
-from utils import PRIORITIES, REMINDER_OPTIONS, format_time, LIGHT_GREEN
+from utils import PRIORITIES, REMINDER_OPTIONS, REPEAT_OPTIONS, format_time, LIGHT_GREEN
 
 
 class TaskDetailDialog(tk.Toplevel):
@@ -103,6 +103,18 @@ class TaskDetailDialog(tk.Toplevel):
                      bg="white", fg="#6B7280").pack(anchor="w")
             tk.Label(info, text=task["project"], font=("Segoe UI", 12),
                      bg="white", fg="#007AFF").pack(anchor="w", pady=(0, 8))
+
+        # Repeat
+        repeat_type = task.get("repeat_type", "")
+        if repeat_type:
+            repeat_label = next((l for l, v in REPEAT_OPTIONS if v == repeat_type), repeat_type)
+            if repeat_type == "custom":
+                interval = task.get("repeat_interval", 1)
+                repeat_label += f" ({interval} dias)"
+            tk.Label(info, text="REPETIR", font=("Segoe UI", 9, "bold"),
+                     bg="white", fg="#6B7280").pack(anchor="w")
+            tk.Label(info, text=repeat_label, font=("Segoe UI", 12),
+                     bg="white", fg="#1A1A2E").pack(anchor="w", pady=(0, 8))
 
         # Description
         if task.get("description"):

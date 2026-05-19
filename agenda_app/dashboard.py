@@ -178,6 +178,13 @@ class Dashboard(tk.Frame):
                 fg="#007AFF", padx=6, pady=1
             ).pack(side="left", padx=(4, 0))
 
+        if task.get("repeat_type"):
+            tk.Label(
+                meta, text="↻",
+                font=("Segoe UI", 11), bg=card_bg,
+                fg="#007AFF"
+            ).pack(side="left", padx=(4, 0))
+
         if is_completed:
             tk.Label(
                 meta, text="Finalizado",

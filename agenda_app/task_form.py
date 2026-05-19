@@ -1,7 +1,7 @@
 import tkinter as tk
 from tkinter import messagebox
 from datetime import datetime, timedelta
-from utils import PRIORITIES, REMINDER_OPTIONS, today_str
+from utils import PRIORITIES, REMINDER_OPTIONS, REPEAT_OPTIONS, today_str
 from database import save_task, get_all_tasks
 
 
@@ -12,7 +12,7 @@ class TaskFormDialog(tk.Toplevel):
         self.task = task
 
         self.title("Editar Tarefa" if task else "Nova Tarefa")
-        self.geometry("480x580")
+        self.geometry("480x650")
         self.resizable(False, False)
         self.transient(parent)
         self.grab_set()
@@ -20,7 +20,7 @@ class TaskFormDialog(tk.Toplevel):
         self._build_form()
         self.update_idletasks()
         x = (self.winfo_screenwidth() // 2) - 240
-        y = (self.winfo_screenheight() // 2) - 290
+        y = (self.winfo_screenheight() // 2) - 325
         self.geometry(f"+{x}+{y}")
 
     def _build_form(self):
@@ -110,10 +110,44 @@ class TaskFormDialog(tk.Toplevel):
         if self.task and self.task.get("project"):
             self.project_entry.insert(0, self.task["project"])
 
+        # Repeat
+        tk.Label(main, text="Repetir", font=("Segoe UI", 11, "bold"),
+                 bg="#FAFAFA", fg="#1A1A2E").pack(anchor="w", pady=(0, 4))
+        repeat_frame = tk.Frame(main, bg="#FAFAFA")
+        repeat_frame.pack(fill="x")
+
+        default_repeat = self.task["repeat_type"] if self.task and self.task.get("repeat_type") else ""
+        self.repeat_var = tk.StringVar(value=default_repeat)
+        for label, val in REPEAT_OPTIONS:
+            rb = tk.Radiobutton(
+                repeat_frame, text=label, variable=self.repeat_var,
+                value=val, font=("Segoe UI", 10),
+                bg="#FAFAFA", selectcolor="#E8F0FE",
+                command=self._toggle_repeat_custom
+            )
+            rb.pack(side="left", padx=2)
+
+        self.custom_frame = tk.Frame(main, bg="#FAFAFA")
+        tk.Label(
+            self.custom_frame, text="A cada quantos dias?",
+            font=("Segoe UI", 10), bg="#FAFAFA", fg="#6B7280"
+        ).pack(side="left", padx=(0, 6))
+        self.repeat_interval_entry = tk.Entry(
+            self.custom_frame, font=("Segoe UI", 11),
+            width=6, relief="solid", bd=1
+        )
+        self.repeat_interval_entry.pack(side="left")
+        default_interval = str(self.task["repeat_interval"]) if self.task and self.task.get("repeat_interval") else "1"
+        self.repeat_interval_entry.insert(0, default_interval)
+        if default_repeat == "custom":
+            self.custom_frame.pack(fill="x", pady=(4, 8))
+        else:
+            self.custom_frame.pack_forget()
+
         # Description
         tk.Label(main, text="Descrição", font=("Segoe UI", 11, "bold"),
-                 bg="#FAFAFA", fg="#1A1A2E").pack(anchor="w", pady=(0, 4))
-        self.desc_text = tk.Text(main, height=3, font=("Segoe UI", 11),
+                 bg="#FAFAFA", fg="#1A1A2E").pack(anchor="w", pady=(8, 4))
+        self.desc_text = tk.Text(main, height=2, font=("Segoe UI", 11),
                                  relief="solid", bd=1)
         self.desc_text.pack(fill="x", pady=(0, 12))
         if self.task and self.task.get("description"):
@@ -138,11 +172,28 @@ class TaskFormDialog(tk.Toplevel):
             command=self._save
         ).pack(side="right")
 
+    def _toggle_repeat_custom(self):
+        if self.repeat_var.get() == "custom":
+            self.custom_frame.pack(fill="x", pady=(4, 8))
+        else:
+            self.custom_frame.pack_forget()
+
     def _save(self):
         title = self.title_entry.get().strip()
         if not title:
             messagebox.showwarning("Atenção", "O título é obrigatório.")
             return
+
+        repeat_type = self.repeat_var.get()
+        repeat_interval = 0
+        if repeat_type == "custom":
+            try:
+                repeat_interval = int(self.repeat_interval_entry.get().strip())
+                if repeat_interval < 1:
+                    raise ValueError
+            except ValueError:
+                messagebox.showwarning("Atenção", "Intervalo personalizado deve ser um número maior que 0.")
+                return
 
         task_data = {
             "title": title,
@@ -154,11 +205,12 @@ class TaskFormDialog(tk.Toplevel):
             "completed": 0,
             "project": self.project_entry.get().strip(),
             "tags": "",
+            "repeat_type": repeat_type,
+            "repeat_interval": repeat_interval,
         }
         if self.task:
             task_data["id"] = self.task["id"]
             task_data["completed"] = self.task.get("completed", 0)
-            # Preserve subtasks from existing task
             from database import get_task_by_id
             existing = get_task_by_id(self.task["id"])
             if existing:

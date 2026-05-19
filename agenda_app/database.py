@@ -26,6 +26,8 @@ def init_db():
             completed INTEGER DEFAULT 0,
             project TEXT DEFAULT '',
             tags TEXT DEFAULT '',
+            repeat_type TEXT DEFAULT '',
+            repeat_interval INTEGER DEFAULT 0,
             created_at TEXT DEFAULT (datetime('now')),
             updated_at TEXT DEFAULT (datetime('now'))
         );
@@ -37,6 +39,16 @@ def init_db():
             FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE
         );
     """)
+    # Migrate columns if missing
+    for col in ["repeat_type", "repeat_interval"]:
+        try:
+            conn.execute(f"ALTER TABLE tasks ADD COLUMN {col} TEXT DEFAULT ''")
+        except sqlite3.OperationalError:
+            pass
+    try:
+        conn.execute("ALTER TABLE tasks ADD COLUMN repeat_interval INTEGER DEFAULT 0")
+    except sqlite3.OperationalError:
+        pass
     conn.commit()
     conn.close()
 
@@ -71,25 +83,29 @@ def save_task(task):
     if task.get("id"):
         conn.execute("""
             UPDATE tasks SET title=?, description=?, task_date=?, task_time=?,
-                priority=?, reminder=?, completed=?, project=?, tags=?, updated_at=?
+                priority=?, reminder=?, completed=?, project=?, tags=?,
+                repeat_type=?, repeat_interval=?, updated_at=?
             WHERE id=?
         """, (
             task["title"], task.get("description", ""),
             task.get("task_date"), task.get("task_time"),
             task.get("priority", 1), task.get("reminder"),
             task.get("completed", 0), task.get("project", ""),
-            task.get("tags", ""), now, task["id"]
+            task.get("tags", ""),
+            task.get("repeat_type", ""), task.get("repeat_interval", 0),
+            now, task["id"]
         ))
     else:
         cur = conn.execute("""
-            INSERT INTO tasks (title, description, task_date, task_time, priority, reminder, completed, project, tags)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO tasks (title, description, task_date, task_time, priority, reminder, completed, project, tags, repeat_type, repeat_interval)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (
             task["title"], task.get("description", ""),
             task.get("task_date"), task.get("task_time"),
             task.get("priority", 1), task.get("reminder"),
             task.get("completed", 0), task.get("project", ""),
-            task.get("tags", "")
+            task.get("tags", ""),
+            task.get("repeat_type", ""), task.get("repeat_interval", 0)
         ))
         task["id"] = cur.lastrowid
 
@@ -108,12 +124,65 @@ def save_task(task):
 
 def toggle_completed(task_id):
     conn = get_connection()
-    conn.execute(
-        "UPDATE tasks SET completed = CASE WHEN completed THEN 0 ELSE 1 END, updated_at = ? WHERE id = ?",
-        (datetime.now().isoformat(), task_id)
-    )
+    row = conn.execute("SELECT * FROM tasks WHERE id = ?", (task_id,)).fetchone()
+    if not row:
+        conn.close()
+        return
+
+    task = dict(row)
+    was_completed = task["completed"]
+
+    if was_completed:
+        conn.execute(
+            "UPDATE tasks SET completed = 0, updated_at = ? WHERE id = ?",
+            (datetime.now().isoformat(), task_id)
+        )
+    else:
+        conn.execute(
+            "UPDATE tasks SET completed = 1, updated_at = ? WHERE id = ?",
+            (datetime.now().isoformat(), task_id)
+        )
+        create_next_occurrence(conn, task)
+
     conn.commit()
     conn.close()
+
+
+def create_next_occurrence(conn, task):
+    repeat_type = task.get("repeat_type", "")
+    if not repeat_type:
+        return
+
+    from datetime import timedelta
+    current_date = datetime.strptime(task["task_date"], "%Y-%m-%d") if task.get("task_date") else datetime.now()
+
+    if repeat_type == "daily":
+        next_date = current_date + timedelta(days=1)
+    elif repeat_type == "weekly":
+        next_date = current_date + timedelta(weeks=1)
+    elif repeat_type == "monthly":
+        month = current_date.month + 1
+        year = current_date.year
+        if month > 12:
+            month = 1
+            year += 1
+        next_date = current_date.replace(year=year, month=month)
+    elif repeat_type == "custom":
+        interval = task.get("repeat_interval", 1) or 1
+        next_date = current_date + timedelta(days=interval)
+    else:
+        return
+
+    conn.execute("""
+        INSERT INTO tasks (title, description, task_date, task_time, priority, reminder, project, tags, repeat_type, repeat_interval)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """, (
+        task["title"], task.get("description", ""),
+        next_date.strftime("%Y-%m-%d"), task.get("task_time"),
+        task.get("priority", 1), task.get("reminder"),
+        task.get("project", ""), task.get("tags", ""),
+        task.get("repeat_type", ""), task.get("repeat_interval", 0)
+    ))
 
 
 def toggle_subtask(subtask_id):

@@ -14,6 +14,14 @@ LIGHT_GREEN = "#E8F5E9"
 LIGHT_BLUE = "#E8F0FE"
 LIGHT_RED = "#FFE5E5"
 LIGHT_ORANGE = "#FFF3E0"
+
+REPEAT_OPTIONS = [
+    ("Não repetir", ""),
+    ("Todo dia", "daily"),
+    ("Toda semana", "weekly"),
+    ("Todo mês", "monthly"),
+    ("Personalizado", "custom"),
+]
 REMINDER_OPTIONS = [
     ("No horário", 0),
     ("5 min antes", 5),
