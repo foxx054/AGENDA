@@ -64,6 +64,19 @@ class NotificationManager:
                 self._notified_ids.add(task["id"])
                 self.app.after(0, self._show_notification, task)
 
+        # Birthday reminders
+        from database import get_setting, get_contacts_with_birthday_this_month
+        if get_setting("birthday_reminder", "1") == "1":
+            today = now.strftime("%m-%d")
+            for c in get_contacts_with_birthday_this_month():
+                cid = f"bday_{c['id']}"
+                if cid in self._notified_ids:
+                    continue
+                bday = c.get("birthday", "")
+                if bday and bday[5:] == today:
+                    self._notified_ids.add(cid)
+                    self.app.after(0, self._show_birthday_notification, c)
+
     def _show_notification(self, task):
         # Close existing notification for this task
         for w in self._active_windows:
@@ -131,6 +144,55 @@ class NotificationManager:
     def _complete(self, win, task):
         toggle_completed(task["id"])
         self.app.refresh_all()
+        try:
+            win.destroy()
+        except:
+            pass
+
+    def _show_birthday_notification(self, contact):
+        for w in self._active_windows:
+            try:
+                w.destroy()
+            except:
+                pass
+        self._active_windows.clear()
+
+        win = tk.Toplevel(self.app)
+        win.title("Aniversário!")
+        win.geometry("380x160")
+        win.resizable(False, False)
+        win.transient(self.app)
+        win.grab_set()
+        win.attributes("-topmost", True)
+
+        self._active_windows.append(win)
+
+        win.update_idletasks()
+        x = (win.winfo_screenwidth() // 2) - 190
+        y = (win.winfo_screenheight() // 2) - 80
+        win.geometry(f"+{x}+{y}")
+
+        frame = tk.Frame(win, bg="#FF9500")
+        frame.pack(fill="both", expand=True, padx=0, pady=0)
+
+        tk.Label(
+            frame, text="🎂 Aniversário",
+            font=("Segoe UI", 14, "bold"), bg=frame["bg"], fg="white"
+        ).pack(anchor="w", padx=20, pady=(20, 4))
+
+        tk.Label(
+            frame, text=contact["name"],
+            font=("Segoe UI", 20, "bold"), bg=frame["bg"], fg="white"
+        ).pack(anchor="w", padx=20, pady=(0, 8))
+
+        tk.Button(
+            frame, text="Fechar",
+            font=("Segoe UI", 10, "bold"), bg="white",
+            fg="#FF9500", bd=0, padx=14, pady=4, cursor="hand2",
+            command=lambda: self._close_notification(win)
+        ).pack(anchor="w", padx=20)
+
+    def _close_notification(self, win):
         try:
             win.destroy()
         except:

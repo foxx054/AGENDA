@@ -54,6 +54,9 @@ def init_db():
         conn.execute("ALTER TABLE tasks ADD COLUMN repeat_interval INTEGER DEFAULT 0")
     except sqlite3.OperationalError:
         pass
+    init_contacts_table(conn)
+    init_notes_table(conn)
+    init_settings_table(conn)
     conn.commit()
     conn.close()
 
@@ -273,6 +276,170 @@ def search_tasks(query, priority=None, completed=0, project=None):
     rows = conn.execute(sql, params).fetchall()
     conn.close()
     return [dict(r) for r in rows]
+
+
+# ─── Contacts ────────────────────────────────────────────────
+def init_contacts_table(conn):
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS contacts (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            phone TEXT DEFAULT '',
+            email TEXT DEFAULT '',
+            tags TEXT DEFAULT '',
+            notes TEXT DEFAULT '',
+            birthday TEXT DEFAULT '',
+            created_at TEXT DEFAULT (datetime('now'))
+        )
+    """)
+
+
+def add_contact(contact):
+    conn = get_connection()
+    cur = conn.execute(
+        "INSERT INTO contacts (name, phone, email, tags, notes, birthday) VALUES (?, ?, ?, ?, ?, ?)",
+        (contact["name"], contact.get("phone", ""), contact.get("email", ""),
+         contact.get("tags", ""), contact.get("notes", ""), contact.get("birthday", ""))
+    )
+    contact["id"] = cur.lastrowid
+    conn.commit()
+    conn.close()
+    return contact
+
+
+def update_contact(contact):
+    conn = get_connection()
+    conn.execute(
+        "UPDATE contacts SET name=?, phone=?, email=?, tags=?, notes=?, birthday=? WHERE id=?",
+        (contact["name"], contact.get("phone", ""), contact.get("email", ""),
+         contact.get("tags", ""), contact.get("notes", ""), contact.get("birthday", ""),
+         contact["id"])
+    )
+    conn.commit()
+    conn.close()
+
+
+def delete_contact(contact_id):
+    conn = get_connection()
+    conn.execute("DELETE FROM contacts WHERE id = ?", (contact_id,))
+    conn.commit()
+    conn.close()
+
+
+def get_all_contacts():
+    conn = get_connection()
+    rows = conn.execute("SELECT * FROM contacts ORDER BY name").fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+
+def search_contacts(query):
+    conn = get_connection()
+    rows = conn.execute(
+        "SELECT * FROM contacts WHERE name LIKE ? OR phone LIKE ? OR email LIKE ? ORDER BY name",
+        (f"%{query}%", f"%{query}%", f"%{query}%")
+    ).fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+
+def get_contacts_with_birthday_this_month():
+    conn = get_connection()
+    month = datetime.now().strftime("%m")
+    rows = conn.execute(
+        "SELECT * FROM contacts WHERE birthday != '' AND substr(birthday, 6, 2) = ? ORDER BY substr(birthday, 9, 2)",
+        (month,)
+    ).fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+
+# ─── Notes ───────────────────────────────────────────────────
+def init_notes_table(conn):
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS notes (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            title TEXT NOT NULL,
+            content TEXT DEFAULT '',
+            is_secret INTEGER DEFAULT 0,
+            password TEXT DEFAULT '',
+            created_at TEXT DEFAULT (datetime('now')),
+            updated_at TEXT DEFAULT (datetime('now'))
+        )
+    """)
+
+
+def add_note(note):
+    conn = get_connection()
+    cur = conn.execute(
+        "INSERT INTO notes (title, content, is_secret, password) VALUES (?, ?, ?, ?)",
+        (note["title"], note.get("content", ""),
+         note.get("is_secret", 0), note.get("password", ""))
+    )
+    note["id"] = cur.lastrowid
+    conn.commit()
+    conn.close()
+    return note
+
+
+def update_note(note):
+    conn = get_connection()
+    conn.execute(
+        "UPDATE notes SET title=?, content=?, is_secret=?, password=?, updated_at=datetime('now') WHERE id=?",
+        (note["title"], note.get("content", ""),
+         note.get("is_secret", 0), note.get("password", ""),
+         note["id"])
+    )
+    conn.commit()
+    conn.close()
+
+
+def delete_note(note_id):
+    conn = get_connection()
+    conn.execute("DELETE FROM notes WHERE id = ?", (note_id,))
+    conn.commit()
+    conn.close()
+
+
+def get_all_notes():
+    conn = get_connection()
+    rows = conn.execute("SELECT * FROM notes ORDER BY updated_at DESC").fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+
+def get_note_by_id(note_id):
+    conn = get_connection()
+    row = conn.execute("SELECT * FROM notes WHERE id = ?", (note_id,)).fetchone()
+    conn.close()
+    return dict(row) if row else None
+
+
+# ─── Settings ────────────────────────────────────────────────
+def init_settings_table(conn):
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS settings (
+            key TEXT PRIMARY KEY,
+            value TEXT DEFAULT ''
+        )
+    """)
+
+
+def get_setting(key, default=""):
+    conn = get_connection()
+    row = conn.execute("SELECT value FROM settings WHERE key = ?", (key,)).fetchone()
+    conn.close()
+    return row["value"] if row else default
+
+
+def set_setting(key, value):
+    conn = get_connection()
+    conn.execute(
+        "INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)",
+        (key, str(value))
+    )
+    conn.commit()
+    conn.close()
 
 
 def get_all_projects():

@@ -5,14 +5,22 @@ from calendar_widget import CalendarWidget
 from task_list import TaskListView
 from task_form import TaskFormDialog
 from notifications import NotificationManager
+from contacts import ContactsView
+from notes import NotesView
+from settings import SettingsView
+from backup import BackupView
 
 
 SIDEBAR_ITEMS = [
-    ("hoje",     "📅", "Hoje"),
-    ("semana",   "📋", "Próximos 7 dias"),
-    ("mes",      "🗓️", "Calendário"),
-    ("todas",    "📂", "Todas"),
+    ("hoje",       "📅", "Hoje"),
+    ("semana",     "📋", "Próximos 7 dias"),
+    ("mes",        "🗓️", "Calendário"),
+    ("todas",      "📂", "Todas"),
     ("importante", "🔴", "Importante"),
+    ("contatos",   "👤", "Contatos"),
+    ("notas",      "📝", "Anotações"),
+    ("config",     "⚙️", "Configurações"),
+    ("backup",     "💾", "Backup"),
 ]
 
 SIDEBAR_WIDTH = 220
@@ -153,6 +161,10 @@ class AgendaApp(tk.Tk):
         self.views["mes"] = CalendarWidget(self.content, self, COLORS)
         self.views["todas"] = TaskListView(self.content, self, COLORS, mode="all")
         self.views["importante"] = TaskListView(self.content, self, COLORS, mode="important")
+        self.views["contatos"] = ContactsView(self.content, self, COLORS)
+        self.views["notas"] = NotesView(self.content, self, COLORS)
+        self.views["config"] = SettingsView(self.content, self, COLORS)
+        self.views["backup"] = BackupView(self.content, self, COLORS)
 
         self._switch_view("hoje")
 
