@@ -41,7 +41,7 @@ class TaskFormDialog(tk.Toplevel):
         entry_frame.pack(fill="x", pady=(0, 14))
         self.title_entry = tk.Entry(
             entry_frame, font=("Segoe UI", 14),
-            bg=surface, fg=text, relief="flat", bd=0, padx=12, pady=8
+            bg=surface, fg=text, relief="flat", bd=0
         )
         self.title_entry.pack(fill="x", ipady=2)
         if self.task:
@@ -62,7 +62,7 @@ class TaskFormDialog(tk.Toplevel):
         df.pack(fill="x", pady=(0, 10))
         self.date_entry = tk.Entry(
             df, font=("Segoe UI", 12), bg=surface, fg=text,
-            relief="flat", bd=0, padx=10, pady=6
+            relief="flat", bd=0
         )
         self.date_entry.pack(fill="x", ipady=2)
         default_date = self.task["task_date"] if self.task and self.task.get("task_date") else today_str()
@@ -77,7 +77,7 @@ class TaskFormDialog(tk.Toplevel):
         tf.pack(fill="x", pady=(0, 10))
         self.time_entry = tk.Entry(
             tf, font=("Segoe UI", 12), bg=surface, fg=text,
-            relief="flat", bd=0, padx=10, pady=6
+            relief="flat", bd=0
         )
         self.time_entry.pack(fill="x", ipady=2)
         default_time = self.task["task_time"] if self.task and self.task.get("task_time") else ""
@@ -125,7 +125,7 @@ class TaskFormDialog(tk.Toplevel):
         pf.pack(fill="x", pady=(0, 10))
         self.project_entry = tk.Entry(
             pf, font=("Segoe UI", 12), bg=surface, fg=text,
-            relief="flat", bd=0, padx=10, pady=6
+            relief="flat", bd=0
         )
         self.project_entry.pack(fill="x", ipady=2)
         if self.task and self.task.get("project"):
@@ -156,7 +156,7 @@ class TaskFormDialog(tk.Toplevel):
         cif.pack(side="left")
         self.repeat_interval_entry = tk.Entry(
             cif, font=("Segoe UI", 11), width=6,
-            bg=surface, fg=text, relief="flat", bd=0, padx=8, pady=4
+            bg=surface, fg=text, relief="flat", bd=0
         )
         self.repeat_interval_entry.pack()
         default_interval = str(self.task["repeat_interval"]) if self.task and self.task.get("repeat_interval") else "1"
@@ -173,7 +173,7 @@ class TaskFormDialog(tk.Toplevel):
         desc_frame.pack(fill="x", pady=(0, 12))
         self.desc_text = tk.Text(
             desc_frame, height=2, font=("Segoe UI", 11),
-            bg=surface, fg=text, relief="flat", bd=0, padx=10, pady=6
+            bg=surface, fg=text, relief="flat", bd=0
         )
         self.desc_text.pack(fill="x")
         if self.task and self.task.get("description"):

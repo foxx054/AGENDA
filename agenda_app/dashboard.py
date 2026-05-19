@@ -56,8 +56,8 @@ class Dashboard(tk.Frame):
         overdue = get_overdue_tasks()
         pending = len(today_tasks)
 
-        summary = tk.Frame(self.scrollable, bg=self.C["surface"], padx=24, pady=(0, 20))
-        summary.pack(fill="x", pady=(0, 12))
+        summary = tk.Frame(self.scrollable, bg=self.C["surface"], padx=24)
+        summary.pack(fill="x", pady=(0, 32))
 
         summary_row = tk.Frame(summary, bg=self.C["surface"])
         summary_row.pack()

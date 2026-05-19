@@ -119,8 +119,8 @@ class AgendaApp(tk.Tk):
         tk.Frame(self.sidebar, bg=COLORS["sidebar_bg"]).pack(expand=True)
 
         # New task button
-        btn_container = tk.Frame(self.sidebar, bg=COLORS["sidebar_bg"], padx=12, pady=(0, 12))
-        btn_container.pack(fill="x")
+        btn_container = tk.Frame(self.sidebar, bg=COLORS["sidebar_bg"])
+        btn_container.pack(fill="x", padx=12, pady=(0, 12))
 
         tk.Button(
             btn_container, text="+ Nova Tarefa",

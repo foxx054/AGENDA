@@ -37,7 +37,7 @@ class TaskListView(tk.Frame):
         self.search_entry = tk.Entry(
             entry_frame, font=("Segoe UI", 12),
             bg="#F5F5F7", fg=self.C["text"],
-            relief="flat", bd=0, padx=12, pady=8
+            relief="flat", bd=0
         )
         self.search_entry.pack(fill="x", ipady=4)
         self.search_entry.bind("<KeyRelease>", lambda e: self._filter())

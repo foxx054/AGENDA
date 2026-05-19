@@ -152,7 +152,7 @@ class TaskDetailDialog(tk.Toplevel):
         st_frame.pack(side="left", fill="x", expand=True, padx=(0, 6))
         self.st_entry = tk.Entry(
             st_frame, font=("Segoe UI", 11), bg=surface, fg=text,
-            relief="flat", bd=0, padx=8, pady=6
+            relief="flat", bd=0
         )
         self.st_entry.pack(fill="x")
         tk.Button(
