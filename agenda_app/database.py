@@ -14,102 +14,205 @@ def get_connection():
 
 def init_db():
     conn = get_connection()
-    conn.execute("""
-        CREATE TABLE IF NOT EXISTS events (
+    conn.executescript("""
+        CREATE TABLE IF NOT EXISTS tasks (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             title TEXT NOT NULL,
-            start_date TEXT NOT NULL,
-            end_date TEXT NOT NULL,
             description TEXT DEFAULT '',
-            category TEXT DEFAULT 'other',
-            color TEXT DEFAULT '#4A90D9',
-            reminder INTEGER DEFAULT 10,
+            task_date TEXT,
+            task_time TEXT,
+            priority INTEGER DEFAULT 1,
+            reminder INTEGER,
+            completed INTEGER DEFAULT 0,
+            project TEXT DEFAULT '',
+            tags TEXT DEFAULT '',
             created_at TEXT DEFAULT (datetime('now')),
             updated_at TEXT DEFAULT (datetime('now'))
-        )
+        );
+        CREATE TABLE IF NOT EXISTS subtasks (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            task_id INTEGER NOT NULL,
+            title TEXT NOT NULL,
+            completed INTEGER DEFAULT 0,
+            FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE
+        );
     """)
     conn.commit()
     conn.close()
 
 
-def get_all_events():
+def get_all_tasks():
     conn = get_connection()
-    rows = conn.execute("SELECT * FROM events ORDER BY start_date").fetchall()
+    rows = conn.execute("SELECT * FROM tasks ORDER BY completed ASC, priority DESC, task_date, task_time").fetchall()
     conn.close()
     return [dict(r) for r in rows]
 
 
-def get_event_by_id(event_id):
+def get_task_by_id(task_id):
     conn = get_connection()
-    row = conn.execute("SELECT * FROM events WHERE id = ?", (event_id,)).fetchone()
+    row = conn.execute("SELECT * FROM tasks WHERE id = ?", (task_id,)).fetchone()
+    if row:
+        task = dict(row)
+        subtasks = conn.execute("SELECT * FROM subtasks WHERE task_id = ? ORDER BY id", (task_id,)).fetchall()
+        task["subtasks"] = [dict(s) for s in subtasks]
+        conn.close()
+        return task
     conn.close()
-    return dict(row) if row else None
+    return None
 
 
-def save_event(event):
+def save_task(task):
     conn = get_connection()
     now = datetime.now().isoformat()
-    if event.get("id"):
+    subtasks = task.pop("subtasks", None) if task.get("id") else task.pop("subtasks", [])
+
+    if task.get("id"):
         conn.execute("""
-            UPDATE events SET title=?, start_date=?, end_date=?, description=?,
-                category=?, color=?, reminder=?, updated_at=?
+            UPDATE tasks SET title=?, description=?, task_date=?, task_time=?,
+                priority=?, reminder=?, completed=?, project=?, tags=?, updated_at=?
             WHERE id=?
         """, (
-            event["title"], event["start_date"], event["end_date"],
-            event.get("description", ""), event.get("category", "other"),
-            event.get("color", "#4A90D9"), event.get("reminder", 10),
-            now, event["id"]
+            task["title"], task.get("description", ""),
+            task.get("task_date"), task.get("task_time"),
+            task.get("priority", 1), task.get("reminder"),
+            task.get("completed", 0), task.get("project", ""),
+            task.get("tags", ""), now, task["id"]
         ))
     else:
         cur = conn.execute("""
-            INSERT INTO events (title, start_date, end_date, description, category, color, reminder)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO tasks (title, description, task_date, task_time, priority, reminder, completed, project, tags)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (
-            event["title"], event["start_date"], event["end_date"],
-            event.get("description", ""), event.get("category", "other"),
-            event.get("color", "#4A90D9"), event.get("reminder", 10)
+            task["title"], task.get("description", ""),
+            task.get("task_date"), task.get("task_time"),
+            task.get("priority", 1), task.get("reminder"),
+            task.get("completed", 0), task.get("project", ""),
+            task.get("tags", "")
         ))
-        event["id"] = cur.lastrowid
+        task["id"] = cur.lastrowid
+
+    if subtasks is not None:
+        conn.execute("DELETE FROM subtasks WHERE task_id = ?", (task["id"],))
+        for st in subtasks:
+            conn.execute(
+                "INSERT INTO subtasks (task_id, title, completed) VALUES (?, ?, ?)",
+                (task["id"], st.get("title", ""), st.get("completed", 0))
+            )
+
     conn.commit()
     conn.close()
-    return event
+    return task
 
 
-def delete_event(event_id):
+def toggle_completed(task_id):
     conn = get_connection()
-    conn.execute("DELETE FROM events WHERE id = ?", (event_id,))
+    conn.execute(
+        "UPDATE tasks SET completed = CASE WHEN completed THEN 0 ELSE 1 END, updated_at = ? WHERE id = ?",
+        (datetime.now().isoformat(), task_id)
+    )
     conn.commit()
     conn.close()
 
 
-def search_events(query, category=None):
+def toggle_subtask(subtask_id):
     conn = get_connection()
-    sql = "SELECT * FROM events WHERE (title LIKE ? OR description LIKE ?)"
-    params = [f"%{query}%", f"%{query}%"]
-    if category:
-        sql += " AND category = ?"
-        params.append(category)
-    sql += " ORDER BY start_date"
-    rows = conn.execute(sql, params).fetchall()
+    conn.execute(
+        "UPDATE subtasks SET completed = CASE WHEN completed THEN 0 ELSE 1 END WHERE id = ?",
+        (subtask_id,)
+    )
+    conn.commit()
     conn.close()
-    return [dict(r) for r in rows]
 
 
-def get_events_by_date(date_str):
+def add_subtask(task_id, title):
+    conn = get_connection()
+    conn.execute("INSERT INTO subtasks (task_id, title) VALUES (?, ?)", (task_id, title))
+    conn.commit()
+    conn.close()
+
+
+def delete_task(task_id):
+    conn = get_connection()
+    conn.execute("DELETE FROM tasks WHERE id = ?", (task_id,))
+    conn.commit()
+    conn.close()
+
+
+def get_tasks_by_date(date_str):
     conn = get_connection()
     rows = conn.execute(
-        "SELECT * FROM events WHERE date(start_date) = ? ORDER BY start_date",
+        "SELECT * FROM tasks WHERE task_date = ? ORDER BY priority DESC, task_time",
         (date_str,)
     ).fetchall()
     conn.close()
     return [dict(r) for r in rows]
 
 
-def get_events_in_range(start_str, end_str):
+def get_tasks_by_date_range(start_str, end_str):
     conn = get_connection()
     rows = conn.execute(
-        "SELECT * FROM events WHERE start_date < ? AND end_date > ? ORDER BY start_date",
-        (end_str, start_str)
+        "SELECT * FROM tasks WHERE task_date >= ? AND task_date <= ? ORDER BY task_date, priority DESC, task_time",
+        (start_str, end_str)
+    ).fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+
+def get_today_tasks():
+    today = datetime.now().strftime("%Y-%m-%d")
+    return get_tasks_by_date(today)
+
+
+def get_high_priority_tasks():
+    conn = get_connection()
+    rows = conn.execute(
+        "SELECT * FROM tasks WHERE priority = 2 AND completed = 0 ORDER BY task_date, task_time"
+    ).fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+
+def get_overdue_tasks():
+    today = datetime.now().strftime("%Y-%m-%d")
+    conn = get_connection()
+    rows = conn.execute(
+        "SELECT * FROM tasks WHERE task_date < ? AND task_date IS NOT NULL AND completed = 0 ORDER BY task_date",
+        (today,)
+    ).fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+
+def search_tasks(query, priority=None, completed=None, project=None):
+    conn = get_connection()
+    sql = "SELECT * FROM tasks WHERE (title LIKE ? OR description LIKE ?)"
+    params = [f"%{query}%", f"%{query}%"]
+    if priority is not None:
+        sql += " AND priority = ?"
+        params.append(priority)
+    if completed is not None:
+        sql += " AND completed = ?"
+        params.append(1 if completed else 0)
+    if project:
+        sql += " AND project = ?"
+        params.append(project)
+    sql += " ORDER BY completed ASC, priority DESC, task_date, task_time"
+    rows = conn.execute(sql, params).fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+
+def get_all_projects():
+    conn = get_connection()
+    rows = conn.execute("SELECT DISTINCT project FROM tasks WHERE project != '' ORDER BY project").fetchall()
+    conn.close()
+    return [r["project"] for r in rows]
+
+
+def get_tasks_no_date():
+    conn = get_connection()
+    rows = conn.execute(
+        "SELECT * FROM tasks WHERE task_date IS NULL OR task_date = '' ORDER BY priority DESC"
     ).fetchall()
     conn.close()
     return [dict(r) for r in rows]
